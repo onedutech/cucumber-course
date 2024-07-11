@@ -1,16 +1,18 @@
 package edu.one.dojo.steps;
 
 import edu.one.dojo.utils.HelperClass;
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
 
 public class CommonSteps {
 
 
-    //@Before
+    @Before
     public void setup() {
         HelperClass.setUpDriver();
     }
 
-    //@After
+    @After
     public void tearDown() {
         HelperClass.tearDown();
     }

@@ -1,16 +1,21 @@
 package edu.one.dojo.utils;
 
+import org.apache.commons.io.FileUtils;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+import java.io.File;
 import java.time.Duration;
 
 public class HelperClass {
 
     private static HelperClass helperClass;
-    private static final WebDriver driver = new ChromeDriver();
+    private static WebDriver driver;
 
     private HelperClass() {
+        driver = new ChromeDriver();
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.manage().window().maximize();
     }
@@ -35,6 +40,18 @@ public class HelperClass {
             driver.quit();
         }
         helperClass = null;
+    }
+
+    public static void takeStepScreenshot(String filename, String testName) {
+        TakesScreenshot screenshot = ((TakesScreenshot) getDriver());
+        File srcImage = screenshot.getScreenshotAs(OutputType.FILE);
+        String filepath = "target/reports/ExtentReporter/" + testName + "/" + filename + ".png";
+        File destFile = new File(filepath);
+        try {
+            FileUtils.copyFile(srcImage, destFile);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
