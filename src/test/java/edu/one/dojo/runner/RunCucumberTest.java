@@ -1,10 +1,9 @@
-package edu.one.dojo.steps;
+package edu.one.dojo.runner;
 
 import io.cucumber.junit.Cucumber;
 import io.cucumber.junit.CucumberOptions;
 import net.masterthought.cucumber.Configuration;
 import net.masterthought.cucumber.ReportBuilder;
-import net.masterthought.cucumber.Reportable;
 import org.junit.runner.RunWith;
 
 import java.io.File;
@@ -16,13 +15,8 @@ import java.util.List;
         features = "src/test/resources/edu/one/dojo/features",
         glue = "edu.one.dojo.steps",
         plugin = {"json:target/cucumber.json", "pretty", "html:target/site/cucumber.html"},
-        dryRun = false,
         stepNotifications = true,
-        publish = false,
-        // name = "",
-        //   tags = "@login",
-        monochrome = true,
-        snippets = CucumberOptions.SnippetType.CAMELCASE
+        monochrome = true
 )
 public class RunCucumberTest {
 
@@ -45,9 +39,7 @@ public class RunCucumberTest {
         configuration.addClassifications("Branch", "release/1.0");
 
         ReportBuilder reportBuilder = new ReportBuilder(jsonFiles, configuration);
-        Reportable result = reportBuilder.generateReports();
-        // and here validate 'result' to decide what to do
-        // if report has failed features, undefined steps etc
+        reportBuilder.generateReports();
 
     }
 }

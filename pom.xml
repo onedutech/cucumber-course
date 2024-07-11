@@ -76,6 +76,5 @@
             <artifactId>selenium-java</artifactId>
             <version>${selenium.version}</version>
         </dependency>
-
     </dependencies>
 </project>

@@ -1,4 +1,4 @@
-package edu.one.dojo.steps;
+package edu.one.dojo.locators;
 
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;

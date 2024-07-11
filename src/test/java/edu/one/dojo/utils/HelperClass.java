@@ -1,4 +1,4 @@
-package edu.one.dojo.steps;
+package edu.one.dojo.utils;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -8,13 +8,10 @@ import java.time.Duration;
 public class HelperClass {
 
     private static HelperClass helperClass;
-
-    private static WebDriver driver;
-    public final static int TIMEOUT = 10;
+    private static final WebDriver driver = new ChromeDriver();
 
     private HelperClass() {
-        driver = new ChromeDriver();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(TIMEOUT));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
         driver.manage().window().maximize();
     }
 

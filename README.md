@@ -1,6 +1,14 @@
-Pour créer un tutoriel d'implémentation en se basant sur les classes mentionnées, nous allons supposer que ces classes
-sont destinées à l'automatisation de tests avec Cucumber et Selenium en Java. Voici un guide détaillé pour mettre en
-place un projet de test Cucumber avec ces classes.
+# Tutoriel de prise en main de Cucumber avec Selenium
+
+**[Cucumber](https://cucumber.io/)** est un framework de tests pour le **B**ehavior **D**riven **D**evelopment,
+initialement développé en Ruby, mais proposant
+aujourd'hui [différentes implémentations pour de nombreux autres langages de programmation](https://docs.cucumber.io/installation).
+Le site de référence est: **[cucumber.io](https://cucumber.io)**.
+
+Dans l'écosystème Java, [Cucumber](https://cucumber.io/) est aujourd'hui un des frameworks BDD les plus utilisés.
+
+Dans ce tutoriel, nous verrons comment implémenter selenium avec cucumber pour pouvoir tester les fonctionnalités des
+pages web.
 
 ### Prérequis
 
@@ -10,21 +18,21 @@ Avant de commencer, assurez-vous d'avoir les outils suivants installés sur votr
 2. **Maven**
 3. **Un IDE comme IntelliJ IDEA ou Eclipse**
 
-### Étape 1 : Configuration du projet Maven
+### Configuration du projet Maven
 
 Créez un projet Maven. Utilisez l'arborescence suivante :
 
 ```
-MyCucumberProject
+
 |-- pom.xml
 |-- src
     |-- main
-    |   |-- java
-    |   |   |-- utils
-    |   |   |   |-- HelperClass.java
-    |   |-- resources
+        |-- java
+        |-- resources
     |-- test
         |-- java
+            |-- utils
+            |   |-- HelperClass.java
             |-- steps
             |   |-- CommonSteps.java
             |   |-- LoginSteps.java
@@ -36,96 +44,160 @@ MyCucumberProject
             |   |-- LoginPageLocators.java
             |-- runner
                 |-- RunCucumberTest.java
+        |-- resources                
+                |-- login.feature        
 ```
 
-### Étape 2 : Configuration du `pom.xml`
+### Configuration du `pom.xml`
 
 Ajoutez les dépendances nécessaires pour Cucumber, Selenium et JUnit dans votre `pom.xml` :
 
-```xml
+```XML
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.example</groupId>
-    <artifactId>MyCucumberProject</artifactId>
-    <version>1.0-SNAPSHOT</version>
-
-    <dependencies>
-        <!-- Cucumber dependencies -->
-        <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-java</artifactId>
-            <version>7.2.3</version>
-        </dependency>
-        <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-junit</artifactId>
-            <version>7.2.3</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.cucumber</groupId>
-            <artifactId>cucumber-spring</artifactId>
-            <version>7.2.3</version>
-        </dependency>
-
-        <!-- Selenium dependencies -->
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-java</artifactId>
-            <version>4.1.0</version>
-        </dependency>
-
-        <!-- JUnit dependencies -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- Additional dependencies can be added here -->
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
-                <configuration>
-                    <source>11</source>
-                    <target>11</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.22.2</version>
-                <configuration>
-                    <includes>
-                        <include>**/RunCucumberTest.java</include>
-                    </includes>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+<dependencies>
+    <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-java</artifactId>
+        <version>7.18.0</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>io.cucumber</groupId>
+        <artifactId>cucumber-junit</artifactId>
+        <version>7.18.0</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>5.10.2</version>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-java</artifactId>
+        <version>4.21.0</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
 ```
 
-### Étape 3 : Création des classes d'actions et de locators
+### Création des fichiers de fonctionnalités Cucumber
+
+Créez un fichier `login.feature` sous `src/test/resources/features` :
+
+```gherkin
+Feature: Access home page
+  As a user, I want to access home page.
+
+  @login
+  Scenario Outline: Authentication
+    Given user navigates to "<home_page>" by opening Chrome
+    When user enters correct "<username>" AND "<password>" values
+    Then user is directed to the homepage
+
+    Examples:
+      | home_page                       | username | password |
+      | http://localhost:8080/home.html | login    | pass     |
+```
+
+### Création de la classe `RunCucumberTest.java`
+
+```java
+package runner;
+
+import io.cucumber.junit.Cucumber;
+import io.cucumber.junit.CucumberOptions;
+import org.junit.runner.RunWith;
+
+@RunWith(Cucumber.class)
+@CucumberOptions(
+        features = "src/test/resources/edu/one/dojo/features",
+        glue = "edu.one.dojo.steps",
+        plugin = {"json:target/cucumber.json", "pretty", "html:target/site/cucumber.html"}
+)
+public class RunCucumberTest {
+}
+```
+
+### Création des classes de steps
+
+**LoginSteps.java** : Cette classe contient les étapes de test relatives au fichier de feature.
+
+```java
+package steps;
+
+public class LoginSteps {
+
+    private WebDriver driver = new ChromeDriver();
+
+    @Given("user navigates to {string} by opening Chrome")
+    public void user_navigates_to_login_page_by_opening_chrome(String page) {
+        driver.get(page);
+    }
+
+    @When("user enters correct {string} AND {string} values")
+    public void userEntersCorrectANDValues(String username, String password) {
+        driver.findElement(By.id("username")).sendKeys(username);
+        driver.findElement(By.id("password")).sendKeys(password);
+        driver.findElement(By.xpath("/html/body/div/form/button")).click();
+    }
+
+    @Then("user is directed to the homepage")
+    public void user_is_directed_to_the_homepage() {
+        Assertions.assertEquals(driver.findElement(By.id("status")).getText(), "Login success");
+    }
+}
+
+```
+
+-----------------
+
+## Framework selenium – Page Object Model et Page Factory
+
+### Page Object Model (POM)
+
+Le Page Object Model (POM) est un modèle de conception pour les tests d'automatisation qui crée une couche d'abstraction
+entre les pages web de l'application et les tests automatisés. En utilisant le POM, chaque page de l'application est
+représentée par une classe distincte. Cette classe contient les
+localisateurs pour différents éléments Web (comme un bouton, un champ de texte, une liste déroulante, etc.) présente sur
+la page et les méthodes pour effectuer des actions sur ces éléments.
+
+### Pourquoi utiliser le Page Object Model ?
+
+- **Réutilisabilité**: Les localisateurs sont définis en un seul endroit, ce qui facilite leur réutilisation dans
+  différents tests.
+- **Maintenance facile**: Si un localisateur change, vous n'avez qu'à le mettre à jour dans la classe des localisateurs,
+  plutôt que dans chaque script de test.
+- **Séparation des préoccupations**: Les localisateurs (représentant la structure de la page) sont séparés des actions
+  et des assertions (représentant la logique du test), ce qui rend le code plus propre et mieux organisé.
+
+#### Utilisation de l’annotation @FindBy
+
+Contrairement à l’approche habituelle d’initialisation des éléments de page Web à l’aide de FindElement ou
+FindElements, Page Factory utilise l’ annotation `@FindBy` . Les annotations utilisées dans Page Factory sont
+descriptives. De plus, ils aident à améliorer la lisibilité du code.
+
+```java
+@FindBy(id = "username")
+public WebElement username;
+```
+
+### Création des classes de locators
 
 **HomePageLocators.java**
 
 ```java
 package locators;
 
-import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
 
 public class HomePageLocators {
-    public static final By LOGIN_BUTTON = By.id("loginButton");
-    public static final By WELCOME_MESSAGE = By.id("welcomeMessage");
+
+    @FindBy(id = "status")
+    public WebElement status;
+
 }
 ```
 
@@ -134,14 +206,44 @@ public class HomePageLocators {
 ```java
 package locators;
 
-import org.openqa.selenium.By;
-
 public class LoginPageLocators {
-    public static final By USERNAME_FIELD = By.id("username");
-    public static final By PASSWORD_FIELD = By.id("password");
-    public static final By SUBMIT_BUTTON = By.id("submit");
+
+    @FindBy(id = "username")
+    public WebElement username;
+
+    @FindBy(id = "password")
+    public WebElement password;
+
+    @FindBy(xpath = "/html/body/div/form/button")
+    public WebElement login;
+
+
 }
 ```
+
+### Page Factory
+
+Page Factory est une classe fournie par Selenium WebDriver pour implémenter le modèle d’objet de page. Le référentiel
+d’objets de page est séparé des méthodes de test à l’aide du concept Page Factory. En l’utilisant, vous pouvez
+initialiser les objets de page (POM) ou les instancier directement.
+En termes simples, le modèle d’objet de page vous permet
+de créer des classes Java distinctes pour différentes pages d’un site Web. Ces différentes classes contiennent les
+localisateurs pour différents éléments Web (comme un bouton, un champ de texte, une liste déroulante, etc.) présente sur
+la page et les méthodes pour effectuer des actions sur ces éléments. Ce faisant, vous pouvez simplifier votre code et
+séparer les méthodes de test et le référentiel d’objets.
+
+#### Initialisation des éléments à l’aide de initElements
+
+Il s’agit d’une méthode statique utilisée pour initialiser les éléments Web que nous localisons à l’aide de `@FindBy` ou
+d’autres annotations, instanciant ainsi la classe de page.
+
+```java
+
+PageFactory.initElements(WebDriver driver,PageObjectClass pageObject);
+
+```
+
+### Création des classes d'actions
 
 **HomePageActions.java**
 
@@ -197,129 +299,59 @@ public class LoginPageActions {
 }
 ```
 
-### Étape 4 : Création des classes de steps
+### Création des classes de steps
 
-**CommonSteps.java**
+**CommonSteps.java** : Cette classe permettra de définir les hooks de test unitaire
 
 ```java
 package steps;
-
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
 
 public class CommonSteps {
-    protected static WebDriver driver;
-
-    public void setUp() {
-        System.setProperty("webdriver.chrome.driver", "path/to/chromedriver");
-        driver = new ChromeDriver();
-    }
-
-    public void tearDown() {
-        if (driver != null) {
-            driver.quit();
-        }
-    }
-}
-```
-
-**LoginSteps.java**
-
-```java
-package steps;
-
-import actions.HomePageActions;
-import actions.LoginPageActions;
-import io.cucumber.java.After;
-import io.cucumber.java.Before;
-import io.cucumber.java.en.Given;
-import io.cucumber.java.en.Then;
-import io.cucumber.java.en.When;
-import org.openqa.selenium.WebDriver;
-
-import static org.junit.Assert.assertEquals;
-
-public class LoginSteps extends CommonSteps {
-
-    private HomePageActions homePageActions;
-    private LoginPageActions loginPageActions;
 
     @Before
-    public void setUpScenario() {
-        setUp();
-        homePageActions = new HomePageActions(driver);
-        loginPageActions = new LoginPageActions(driver);
+    public void setup() {
+        HelperClass.setUpDriver();
     }
 
     @After
-    public void tearDownScenario() {
-        tearDown();
+    public void tearDown() {
+        HelperClass.tearDown();
     }
 
-    @Given("I am on the home page")
-    public void iAmOnTheHomePage() {
-        driver.get("http://example.com");
-    }
-
-    @When("I navigate to the login page")
-    public void iNavigateToTheLoginPage() {
-        homePageActions.clickLoginButton();
-    }
-
-    @When("I enter username {string} and password {string}")
-    public void iEnterUsernameAndPassword(String username, String password) {
-        loginPageActions.enterUsername(username);
-        loginPageActions.enterPassword(password);
-    }
-
-    @When("I submit the login form")
-    public void iSubmitTheLoginForm() {
-        loginPageActions.clickSubmitButton();
-    }
-
-    @Then("I should see the welcome message {string}")
-    public void iShouldSeeTheWelcomeMessage(String expectedMessage) {
-        String actualMessage = homePageActions.getWelcomeMessage();
-        assertEquals(expectedMessage, actualMessage);
-    }
 }
 ```
 
-### Étape 5 : Création de la classe `RunCucumberTest.java`
+**LoginSteps.java** : Cette classe contient les étapes de test relatives au fichier de feature/
 
 ```java
-package runner;
+package steps;
 
-import io.cucumber.junit.Cucumber;
-import io.cucumber.junit.CucumberOptions;
-import org.junit.runner.RunWith;
+public class LoginSteps {
 
-@RunWith(Cucumber.class)
-@CucumberOptions(
-        features = "src/test/resources/features",
-        glue = "steps"
-)
-public class RunCucumberTest {
+    LoginPageActions loginPageActions = new LoginPageActions();
+    HomePageActions homePageActions = new HomePageActions();
+
+    @Given("user navigates to {string} by opening Chrome")
+    public void user_navigates_to_login_page_by_opening_chrome(String page) {
+        HelperClass.openPage(page);
+    }
+
+    @When("user enters correct {string} AND {string} values")
+    public void userEntersCorrectANDValues(String username, String password) {
+        loginPageActions.login(username, password);
+    }
+
+    @Then("user is directed to the homepage")
+    public void user_is_directed_to_the_homepage() {
+        Assertions.assertEquals(homePageActions.getHomePageText(), "Login success");
+    }
 }
-```
 
-### Étape 6 : Création des fichiers de fonctionnalités Cucumber
-
-Créez un fichier `login.feature` sous `src/test/resources/features` :
-
-```gherkin
-Feature: Login
-
-  Scenario: Successful login
-    Given I am on the home page
-    When I navigate to the login page
-    And I enter username "user1" and password "password1"
-    And I submit the login form
-    Then I should see the welcome message "Welcome user1"
 ```
 
 ### Conclusion
 
-Vous avez maintenant un projet de test Cucumber et Selenium configuré avec Maven. Vous pouvez exécuter vos tests en
-exécutant la classe `RunCucumberTest`. Ce tutoriel vous donne une structure de base que vous pouvez étendre en ajoutant
-plus de scénarios, d'actions et de locators selon vos besoins.
+En utilisant le Page Object Model, les localisateurs sont séparés des actions, ce qui facilite la maintenance et la
+lisibilité du code. Les classes LoginPageLocators et HomePageLocators définissent les éléments de la page, tandis que
+les classes d'actions comme LoginPageActions et HomePageActions définissent les interactions avec ces éléments. Cela
+permet de créer des tests automatisés robustes et faciles à maintenir.

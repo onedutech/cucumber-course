@@ -1,9 +1,11 @@
-package edu.one.dojo.steps;
+package edu.one.dojo.actions;
 
+import edu.one.dojo.locators.HomePageLocators;
+import edu.one.dojo.utils.HelperClass;
 import org.openqa.selenium.support.PageFactory;
 
 public class HomePageActions {
-    HomePageLocators homePageLocators = null;
+    HomePageLocators homePageLocators;
 
     public HomePageActions() {
         this.homePageLocators = new HomePageLocators();
