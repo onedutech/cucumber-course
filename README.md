@@ -82,6 +82,11 @@ Ajoutez les dépendances nécessaires pour Cucumber, Selenium et JUnit dans votr
 </dependencies>
 ```
 
+### Application à tester
+
+Dans le cadre de ce tutoriel, l'application témoin qui sera testée est à récupérer depuis le
+lien [Spring Login]( https://github.com/onedutech/springlogin)
+
 ### Création des fichiers de fonctionnalités Cucumber
 
 Créez un fichier `login.feature` sous `src/test/resources/features` :
