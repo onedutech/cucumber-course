@@ -7,10 +7,12 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.junit.jupiter.api.Assertions;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
 
 public class LoginSteps {
 
-    // private final WebDriver driver = new ChromeDriver();
+    private final WebDriver driver = new ChromeDriver();
     private final LoginPageActions loginPageActions = new LoginPageActions();
     private final HomePageActions homePageActions = new HomePageActions();
 
