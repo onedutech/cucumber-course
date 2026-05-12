@@ -259,18 +259,16 @@ import locators.HomePageLocators;
 import org.openqa.selenium.WebDriver;
 
 public class HomePageActions {
-    WebDriver driver;
+    HomePageLocators homePageLocators;
 
-    public HomePageActions(WebDriver driver) {
-        this.driver = driver;
+    public HomePageActions() {
+        this.homePageLocators = new HomePageLocators();
+        PageFactory.initElements(HelperClass.getDriver(), homePageLocators);
     }
 
-    public void clickLoginButton() {
-        driver.findElement(HomePageLocators.LOGIN_BUTTON).click();
-    }
-
-    public String getWelcomeMessage() {
-        return driver.findElement(HomePageLocators.WELCOME_MESSAGE).getText();
+    // Get the login status from Home Page
+    public String getHomePageText() {
+        return homePageLocators.status.getText();
     }
 }
 ```
@@ -280,27 +278,39 @@ public class HomePageActions {
 ```java
 package actions;
 
-import locators.LoginPageLocators;
-import org.openqa.selenium.WebDriver;
-
 public class LoginPageActions {
-    WebDriver driver;
+    LoginPageLocators loginPageLocators = null;
 
-    public LoginPageActions(WebDriver driver) {
-        this.driver = driver;
+    public LoginPageActions() {
+        this.loginPageLocators = new LoginPageLocators();
+        PageFactory.initElements(HelperClass.getDriver(), loginPageLocators);
     }
 
-    public void enterUsername(String username) {
-        driver.findElement(LoginPageLocators.USERNAME_FIELD).sendKeys(username);
+    // Set username in username textbox
+    public void setUserName(String strUserName) {
+        this.loginPageLocators.username.sendKeys(strUserName);
     }
 
-    public void enterPassword(String password) {
-        driver.findElement(LoginPageLocators.PASSWORD_FIELD).sendKeys(password);
+    // Set password in password textbox
+    public void setPassword(String strPassword) {
+        this.loginPageLocators.password.sendKeys(strPassword);
     }
 
-    public void clickSubmitButton() {
-        driver.findElement(LoginPageLocators.SUBMIT_BUTTON).click();
+    // Click on login button
+    public void clickLogin() {
+        this.loginPageLocators.login.click();
     }
+
+
+    public void login(String strUserName, String strPassword) {
+        // Fill user name
+        this.setUserName(strUserName);
+        // Fill password
+        this.setPassword(strPassword);
+        // Click Login button
+        this.clickLogin();
+    }
+
 }
 ```
 
