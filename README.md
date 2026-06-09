@@ -248,23 +248,6 @@ réalisé.
 Vous remarquerez que tous les tests sont au ROUGE, et que la console indique la présence
 de `io.cucumber.java.PendingException: TODO: implement me` ce qui signifie qu'une implémentation des steps est attendue.
 
-**_(DEPRECATED)_ Ajouter l'annotation `@CucumberOptions(strict = true)`** à la
-classe `edu.one.dojo.steps.RunCucumberTest`:
-
-Il est possible de faire en sorte que les tests soient au ROUGE lorsque une(des) step(s) reste(nt) à implémenter. Pour
-cela il est nécessaire de configurer le lanceur de test `edu.one.dojo.steps.RunCucumberTest` à l'aide de l'
-annotation `@CucumberOptions` et
-de l'option `strict` à `true`.
-
-```JAVA
-
-@RunWith(Cucumber.class)
-@CucumberOptions(strict = true)
-public class edu.one.dojo.steps.RunCucumberTest{
-        }
-```
-
-Cette option n'est plus possible à partir de la version 7 de cucumber.
 
 #### 5.3. L'implémentation des steps en Java pour produire le comportement attendu
 
@@ -862,13 +845,24 @@ la [partie Gherkin Reference de la documentation Cucumber](https://docs.cucumber
 
 ## Paramétrer le lanceur de test  à partir de `@CucumberOptions` <a id="CucumberOptions"></a>
 
-![img.png](img.png)
 
 Pour paramétrer le lanceur de test `JUnitRunner`, des options de configurations peuvent lui être transmises via
 l'annotation `@CucumberOptions`.
 
 La liste d'options de configuration est disponible dans le manuel de référence (
 partie [Options et List configuration options](https://docs.cucumber.io/cucumber/api/#options)).
+
+### Options principales
+
+| Option | Description | Exemple |
+|--------|-------------|---------|
+| `features` | Chemin vers les fichiers .feature | `"src/test/resources"` |
+| `glue` | Package contenant les steps | `"edu.one.dojo.steps"` |
+| `plugin` | Plugins pour les rapports | `"pretty", "html:target/cucumber.html"` |
+| `tags` | Filtrer les scénarios par tags | `"@smoke and not @slow"` |
+| `monochrome` | Améliorer la lisibilité console | `true` |
+| `dryRun` | Vérifier les steps sans exécution | `false` |
+
 
 Nous allons nous intéresser à ces options:
 
@@ -898,7 +892,7 @@ Exécuter `edu.one.dojo.steps.RunCucumberTest`: la console affiche `0 Scenario -
 scénario à
 exécuter.
 
-Paramétrer le lanceur de test de la manière suivante: `@CucumberOptions(features="src/test/resources",strict = true)`
+Paramétrer le lanceur de test de la manière suivante: `@CucumberOptions(features="src/test/resources")`
 Exécuter-le à nouveau.
 
 La console affiche cette fois-ci `3 Scenario - 11 Steps`, le lanceur de test est allé chercher tous les `.feature` du
@@ -906,7 +900,7 @@ dossier `src/test/resources` et de ses sous-dossiers.
 *Remarque*: on aurait également pu aussi écrire `features="src/test/resources/dojo2"` pour plus de précision.
 
 **Avant de continuer, remettre `cocktail.feature` dans le package `dojo` et laisser comme options de
-configuration: `@CucumberOptions(features="src/test/resources",strict = true)`.  
+configuration: `@CucumberOptions(features="src/test/resources")`.  
 Exécuter `edu.one.dojo.steps.RunCucumberTest` et s'assurer dans la console que 3 Scénarios ont été testés et qu'ils
 passent bien au
 VERT!**
@@ -1231,6 +1225,900 @@ projet `cucumber-reporting` qui indiquent comment utiliser `cucumber-reporting`:
 * en [**Standalone**](https://github.com/damianszczepanik/cucumber-reporting): c'est ce que nous venons de faire ;
 * directement en [**Maven**](https://github.com/damianszczepanik/maven-cucumber-reporting): pour configurer la
   génération de rapports dans le `pom.xml`.
+
+
+
+
+## Utiliser les hooks (@Before, @After) pour setup/teardown
+
+### Objectif
+
+Les hooks permettent d'exécuter du code avant et après chaque scénario ou étape, facilitant la mise en place (setup) et le nettoyage (teardown) des ressources de test.
+
+### Concepts clés
+
+- **@Before** : S'exécute avant chaque scénario
+- **@After** : S'exécute après chaque scénario (même en cas d'échec)
+- **@BeforeStep** : S'exécute avant chaque step
+- **@AfterStep** : S'exécute après chaque step
+- **Order** : Contrôle l'ordre d'exécution des hooks
+- **Tags** : Permet de cibler des scénarios spécifiques
+
+### Exemple 1 : Hooks de base pour une base de données
+
+#### Créer la classe Hooks.java
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+
+public class DatabaseHooks {
+    
+    private DatabaseConnection dbConnection;
+    
+    @Before
+    public void setupDatabase(Scenario scenario) {
+        System.out.println("🔧 Setup: Connexion à la base de données");
+        System.out.println("📝 Scénario: " + scenario.getName());
+        
+        dbConnection = new DatabaseConnection();
+        dbConnection.connect();
+        dbConnection.cleanDatabase();
+    }
+    
+    @After
+    public void teardownDatabase(Scenario scenario) {
+        System.out.println("🧹 Teardown: Nettoyage de la base de données");
+        System.out.println("✅ Statut: " + scenario.getStatus());
+        
+        if (dbConnection != null) {
+            dbConnection.cleanDatabase();
+            dbConnection.disconnect();
+        }
+    }
+}
+```
+
+### Exemple 2 : Hooks avec ordre d'exécution
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Order;
+
+public class OrderedHooks {
+    
+    @Before(order = 1)
+    public void setupFirst() {
+        System.out.println("1️⃣ Premier hook - Configuration globale");
+    }
+    
+    @Before(order = 2)
+    public void setupSecond() {
+        System.out.println("2️⃣ Deuxième hook - Configuration spécifique");
+    }
+    
+    @After(order = 2)
+    public void teardownFirst() {
+        System.out.println("2️⃣ Premier teardown - Nettoyage spécifique");
+    }
+    
+    @After(order = 1)
+    public void teardownLast() {
+        System.out.println("1️⃣ Dernier teardown - Nettoyage global");
+    }
+}
+```
+
+**Note** : Les hooks `@After` s'exécutent dans l'ordre inverse (ordre décroissant).
+
+### Exemple 3 : Hooks conditionnels avec tags
+
+#### Feature avec tags
+
+```gherkin
+Feature: Gestion des utilisateurs
+
+  @database @cleanup
+  Scenario: Créer un utilisateur
+    Given la base de données est vide
+    When je crée un utilisateur "Alice"
+    Then l'utilisateur "Alice" existe dans la base
+
+  @api
+  Scenario: Appeler l'API utilisateur
+    When j'appelle l'API GET /users
+    Then je reçois une liste d'utilisateurs
+```
+
+#### Hooks ciblés par tags
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+
+public class TaggedHooks {
+    
+    @Before("@database")
+    public void setupDatabase() {
+        System.out.println("🗄️ Setup: Initialisation de la base de données");
+        // Code de connexion à la base
+    }
+    
+    @After("@database and @cleanup")
+    public void cleanupDatabase() {
+        System.out.println("🧹 Cleanup: Nettoyage complet de la base");
+        // Code de nettoyage approfondi
+    }
+    
+    @Before("@api")
+    public void setupApiClient() {
+        System.out.println("🌐 Setup: Configuration du client API");
+        // Code d'initialisation du client API
+    }
+    
+    @After("@api")
+    public void teardownApiClient() {
+        System.out.println("🔌 Teardown: Fermeture du client API");
+        // Code de fermeture des connexions
+    }
+}
+```
+
+### Exemple 4 : Hooks pour captures d'écran (tests UI)
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+public class WebDriverHooks {
+    
+    private static WebDriver driver;
+    
+    @Before("@web")
+    public void setupWebDriver() {
+        System.out.println("🌐 Setup: Lancement du navigateur");
+        driver = new ChromeDriver();
+        driver.manage().window().maximize();
+    }
+    
+    @After("@web")
+    public void teardownWebDriver(Scenario scenario) {
+        // Capture d'écran en cas d'échec
+        if (scenario.isFailed()) {
+            System.out.println("📸 Capture d'écran de l'échec");
+            byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+            scenario.attach(screenshot, "image/png", "Screenshot échec");
+        }
+        
+        System.out.println("🔚 Teardown: Fermeture du navigateur");
+        if (driver != null) {
+            driver.quit();
+        }
+    }
+    
+    public static WebDriver getDriver() {
+        return driver;
+    }
+}
+```
+
+### Exemple 5 : Hooks au niveau des steps
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.AfterStep;
+import io.cucumber.java.BeforeStep;
+import io.cucumber.java.Scenario;
+
+public class StepHooks {
+    
+    @BeforeStep
+    public void beforeEachStep(Scenario scenario) {
+        System.out.println("⏩ Avant step dans: " + scenario.getName());
+    }
+    
+    @AfterStep
+    public void afterEachStep(Scenario scenario) {
+        System.out.println("✓ Après step dans: " + scenario.getName());
+        
+        // Exemple: Attendre un peu entre chaque step
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+### Bonnes pratiques
+
+1. **Utilisez @Before pour la préparation** : Connexions, initialisations, données de test
+2. **Utilisez @After pour le nettoyage** : Même en cas d'échec, le code s'exécute
+3. **Gérez l'ordre avec @Order** : Pour des dépendances entre hooks
+4. **Ciblez avec des tags** : Pour des hooks spécifiques à certains scénarios
+5. **Capturez les échecs** : Screenshots, logs, état du système
+6. **Évitez la logique métier** : Les hooks sont pour l'infrastructure, pas la logique
+7. **Partagez les ressources** : Utilisez des variables statiques si nécessaire
+8. **Documentez les hooks** : Expliquez pourquoi ils existent
+
+---
+
+## Utiliser les Data Tables pour des données complexes
+
+### Objectif
+
+Les Data Tables permettent de passer des structures de données complexes (tableaux, listes, maps) directement dans les steps Gherkin, rendant les scénarios plus expressifs et maintenables.
+
+### Concepts clés
+
+- **DataTable** : Objet Cucumber représentant un tableau de données
+- **Conversion automatique** : Vers List, Map, ou objets personnalisés
+- **Formats** : Tableaux horizontaux, verticaux, ou avec en-têtes
+- **Réutilisabilité** : Même step pour différentes structures de données
+
+### Exemple 1 : Liste simple de valeurs
+
+#### Feature avec Data Table
+
+```gherkin
+Feature: Gestion du panier
+
+  Scenario: Ajouter plusieurs articles au panier
+    Given je suis sur la page d'accueil
+    When j'ajoute les articles suivants au panier:
+      | Pomme  |
+      | Banane |
+      | Orange |
+    Then le panier contient 3 articles
+```
+
+#### Step Definition
+
+```java
+package edu.one.dojo.steps;
+
+import io.cucumber.java.en.When;
+import io.cucumber.datatable.DataTable;
+import java.util.List;
+
+public class PanierSteps {
+    
+    private Panier panier = new Panier();
+    
+    @When("j'ajoute les articles suivants au panier:")
+    public void ajouterArticles(DataTable dataTable) {
+        // Conversion en liste de strings
+        List<String> articles = dataTable.asList();
+        
+        for (String article : articles) {
+            System.out.println("🛒 Ajout de: " + article);
+            panier.ajouter(article);
+        }
+    }
+}
+```
+
+### Exemple 2 : Tableau avec en-têtes (List<Map>)
+
+#### Feature avec en-têtes
+
+```gherkin
+Feature: Gestion des produits
+
+  Scenario: Créer plusieurs produits
+    Given je suis administrateur
+    When je crée les produits suivants:
+      | nom      | prix | stock |
+      | Laptop   | 999  | 10    |
+      | Souris   | 25   | 50    |
+      | Clavier  | 75   | 30    |
+    Then 3 produits sont créés
+```
+
+#### Step Definition avec List<Map>
+
+```java
+package edu.one.dojo.steps;
+
+import io.cucumber.java.en.When;
+import io.cucumber.datatable.DataTable;
+import java.util.List;
+import java.util.Map;
+
+public class ProduitSteps {
+    
+    private List<Produit> produits = new ArrayList<>();
+    
+    @When("je crée les produits suivants:")
+    public void creerProduits(DataTable dataTable) {
+        // Conversion en liste de maps (clé = en-tête, valeur = cellule)
+        List<Map<String, String>> rows = dataTable.asMaps();
+        
+        for (Map<String, String> row : rows) {
+            String nom = row.get("nom");
+            double prix = Double.parseDouble(row.get("prix"));
+            int stock = Integer.parseInt(row.get("stock"));
+            
+            Produit produit = new Produit(nom, prix, stock);
+            produits.add(produit);
+            
+            System.out.println("✅ Produit créé: " + produit);
+        }
+    }
+}
+```
+
+### Exemple 3 : Conversion automatique en objets (List<Produit>)
+
+#### Créer une classe Produit
+
+```java
+package edu.one.dojo.model;
+
+public class Produit {
+    private String nom;
+    private double prix;
+    private int stock;
+    
+    // Constructeur par défaut requis
+    public Produit() {}
+    
+    public Produit(String nom, double prix, int stock) {
+        this.nom = nom;
+        this.prix = prix;
+        this.stock = stock;
+    }
+    
+    // Getters et setters
+    public String getNom() { return nom; }
+    public void setNom(String nom) { this.nom = nom; }
+    
+    public double getPrix() { return prix; }
+    public void setPrix(double prix) { this.prix = prix; }
+    
+    public int getStock() { return stock; }
+    public void setStock(int stock) { this.stock = stock; }
+    
+    @Override
+    public String toString() {
+        return String.format("%s (%.2f€, stock: %d)", nom, prix, stock);
+    }
+}
+```
+
+#### Step Definition avec conversion automatique
+
+```java
+package edu.one.dojo.steps;
+
+import io.cucumber.java.en.When;
+import edu.one.dojo.model.Produit;
+import java.util.List;
+
+public class ProduitSteps {
+    
+    @When("je crée les produits suivants:")
+    public void creerProduits(List<Produit> produits) {
+        // Cucumber convertit automatiquement le DataTable en List<Produit>
+        // en utilisant les en-têtes comme noms de propriétés
+        
+        for (Produit produit : produits) {
+            System.out.println("✅ Produit créé: " + produit);
+            // Logique de création...
+        }
+    }
+}
+```
+
+### Exemple 4 : Tableau vertical (Map<String, String>)
+
+#### Feature avec tableau vertical
+
+```gherkin
+Feature: Profil utilisateur
+
+  Scenario: Créer un profil complet
+    Given je suis sur la page d'inscription
+    When je remplis le formulaire avec:
+      | Nom       | Dupont           |
+      | Prénom    | Jean             |
+      | Email     | jean@example.com |
+      | Téléphone | 0612345678       |
+      | Ville     | Paris            |
+    Then le profil est créé avec succès
+```
+
+#### Step Definition avec Map
+
+```java
+package edu.one.dojo.steps;
+
+import io.cucumber.java.en.When;
+import java.util.Map;
+
+public class ProfilSteps {
+    
+    @When("je remplis le formulaire avec:")
+    public void remplirFormulaire(Map<String, String> profil) {
+        // Cucumber convertit automatiquement en Map
+        
+        System.out.println("📝 Création du profil:");
+        System.out.println("  Nom: " + profil.get("Nom"));
+        System.out.println("  Prénom: " + profil.get("Prénom"));
+        System.out.println("  Email: " + profil.get("Email"));
+        System.out.println("  Téléphone: " + profil.get("Téléphone"));
+        System.out.println("  Ville: " + profil.get("Ville"));
+        
+        // Logique de création du profil...
+    }
+}
+```
+
+### Exemple 5 : Data Table avec Scenario Outline
+
+#### Feature combinant les deux
+
+```gherkin
+Feature: Commandes multiples
+
+  Scenario Outline: Commander différents paniers
+    Given je suis client "<type>"
+    When je commande les articles suivants:
+      | article    | quantité |
+      | <article1> | <qte1>   |
+      | <article2> | <qte2>   |
+    Then le total est de <total> euros
+    
+    Examples:
+      | type     | article1 | qte1 | article2 | qte2 | total |
+      | Standard | Pomme    | 2    | Banane   | 3    | 5.50  |
+      | Premium  | Laptop   | 1    | Souris   | 2    | 1049  |
+```
+
+### Bonnes pratiques
+
+1. **Utilisez des en-têtes clairs** : Noms explicites pour les colonnes
+2. **Préférez la conversion automatique** : Laissez Cucumber faire le travail
+3. **Validez les données** : Vérifiez les valeurs dans les transformers
+4. **Gardez les tableaux lisibles** : Pas trop de colonnes (max 5-6)
+5. **Utilisez des objets métier** : Conversion directe en classes du domaine
+6. **Documentez les formats** : Expliquez les formats attendus
+7. **Combinez avec Scenario Outline** : Pour des tests paramétrés puissants
+8. **Évitez les tableaux trop grands** : Privilégiez plusieurs scénarios
+
+---
+
+## Intégrer avec des frameworks de test
+
+### Objectif
+
+Cucumber s'intègre facilement avec des frameworks de test populaires comme Selenium (tests UI), RestAssured (tests API), et d'autres outils pour créer des tests end-to-end complets.
+
+### Frameworks courants
+
+- **Selenium WebDriver** : Tests d'interface web
+- **RestAssured** : Tests d'API REST
+- **Appium** : Tests d'applications mobiles
+- **WireMock** : Mock de services HTTP
+- **TestContainers** : Conteneurs Docker pour tests d'intégration
+
+### Exemple 1 : Intégration avec Selenium WebDriver
+
+#### Ajouter les dépendances Maven
+
+```xml
+<dependencies>
+    <!-- Selenium WebDriver -->
+    <dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-java</artifactId>
+        <version>4.15.0</version>
+    </dependency>
+    
+    <!-- WebDriverManager -->
+    <dependency>
+        <groupId>io.github.bonigarcia</groupId>
+        <artifactId>webdrivermanager</artifactId>
+        <version>5.6.2</version>
+    </dependency>
+</dependencies>
+```
+
+#### Feature pour test UI
+
+```gherkin
+Feature: Connexion utilisateur
+
+  @web @login
+  Scenario: Connexion réussie
+    Given je suis sur la page de connexion
+    When je saisis "alice@example.com" comme email
+    And je saisis "password123" comme mot de passe
+    And je clique sur le bouton "Se connecter"
+    Then je suis redirigé vers le tableau de bord
+    And je vois le message "Bienvenue Alice"
+```
+
+#### Hooks Selenium
+
+```java
+package edu.one.dojo.hooks;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import io.cucumber.java.Scenario;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+
+import java.time.Duration;
+
+public class SeleniumHooks {
+    
+    private static WebDriver driver;
+    
+    @Before("@web")
+    public void setupSelenium() {
+        System.out.println("🌐 Initialisation de Selenium WebDriver");
+        
+        WebDriverManager.chromedriver().setup();
+        
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--start-maximized");
+        options.addArguments("--disable-notifications");
+        
+        driver = new ChromeDriver(options);
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+    }
+    
+    @After("@web")
+    public void teardownSelenium(Scenario scenario) {
+        if (scenario.isFailed() && driver != null) {
+            byte[] screenshot = ((TakesScreenshot) driver)
+                .getScreenshotAs(OutputType.BYTES);
+            scenario.attach(screenshot, "image/png", scenario.getName());
+        }
+        
+        if (driver != null) {
+            driver.quit();
+            System.out.println("🔚 Fermeture de Selenium WebDriver");
+        }
+    }
+    
+    public static WebDriver getDriver() {
+        return driver;
+    }
+}
+```
+
+### Exemple 2 : Intégration avec RestAssured (API)
+
+#### Ajouter la dépendance Maven
+
+```xml
+<dependency>
+    <groupId>io.rest-assured</groupId>
+    <artifactId>rest-assured</artifactId>
+    <version>5.4.0</version>
+</dependency>
+```
+
+#### Feature pour test API
+
+```gherkin
+Feature: API Utilisateurs
+
+  @api
+  Scenario: Récupérer la liste des utilisateurs
+    Given l'API est disponible
+    When j'envoie une requête GET à "/api/users"
+    Then le code de statut est 200
+    And la réponse contient une liste d'utilisateurs
+
+  @api
+  Scenario: Créer un nouvel utilisateur
+    Given l'API est disponible
+    When j'envoie une requête POST à "/api/users" avec:
+      | name  | Alice Smith       |
+      | email | alice@example.com |
+      | role  | admin             |
+    Then le code de statut est 201
+    And la réponse contient l'utilisateur créé
+```
+
+#### Step Definitions API
+
+```java
+package edu.one.dojo.steps;
+
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import io.restassured.response.Response;
+
+import java.util.Map;
+
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
+public class ApiSteps {
+    
+    private Response response;
+    
+    @Given("l'API est disponible")
+    public void verifyApiAvailable() {
+        baseURI = "http://localhost";
+        port = 8080;
+        basePath = "/api";
+        
+        response = given()
+            .when()
+            .get("/health")
+            .then()
+            .statusCode(200)
+            .extract().response();
+        
+        System.out.println("✅ API disponible");
+    }
+    
+    @When("j'envoie une requête GET à {string}")
+    public void sendGetRequest(String endpoint) {
+        System.out.println("📤 GET " + endpoint);
+        
+        response = given()
+            .when()
+            .get(endpoint)
+            .then()
+            .extract().response();
+        
+        System.out.println("📥 Statut: " + response.getStatusCode());
+    }
+    
+    @When("j'envoie une requête POST à {string} avec:")
+    public void sendPostRequest(String endpoint, Map<String, String> body) {
+        System.out.println("📤 POST " + endpoint);
+        System.out.println("📝 Body: " + body);
+        
+        response = given()
+            .contentType("application/json")
+            .body(body)
+            .when()
+            .post(endpoint)
+            .then()
+            .extract().response();
+        
+        System.out.println("📥 Statut: " + response.getStatusCode());
+    }
+    
+    @Then("le code de statut est {int}")
+    public void verifyStatusCode(int expectedStatus) {
+        int actualStatus = response.getStatusCode();
+        assertEquals("Code de statut incorrect", expectedStatus, actualStatus);
+    }
+    
+    @Then("la réponse contient une liste d'utilisateurs")
+    public void verifyUsersList() {
+        response.then()
+            .body("$", hasSize(greaterThan(0)))
+            .body("[0]", hasKey("id"))
+            .body("[0]", hasKey("name"))
+            .body("[0]", hasKey("email"));
+    }
+    
+    @Then("la réponse contient l'utilisateur créé")
+    public void verifyCreatedUser() {
+        response.then()
+            .body("name", notNullValue())
+            .body("email", notNullValue());
+    }
+}
+```
+
+### Bonnes pratiques
+
+1. **Séparez les couches** : Page Objects, API clients, logique métier
+2. **Utilisez des hooks** : Pour setup/teardown des frameworks
+3. **Gérez les timeouts** : Attentes explicites et implicites
+4. **Capturez les échecs** : Screenshots, logs, réponses API
+5. **Isolez les tests** : Chaque scénario doit être indépendant
+6. **Configurez par environnement** : Dev, test, staging, prod
+7. **Documentez les dépendances** : Versions, configurations requises
+
+---
+
+## Mettre en place une documentation vivante
+
+### Objectif
+
+La documentation vivante (Living Documentation) transforme vos tests Cucumber en documentation toujours à jour, lisible par tous les membres de l'équipe (techniques et non-techniques).
+
+### Concepts clés
+
+- **Documentation exécutable** : Les tests sont la documentation
+- **Toujours à jour** : Se met à jour automatiquement avec le code
+- **Lisible par tous** : Format Gherkin compréhensible
+- **Rapports visuels** : HTML, PDF, dashboards
+- **Traçabilité** : Lien entre exigences et tests
+
+### Exemple 1 : Structure de documentation vivante
+
+#### Organisation des features par domaine
+
+```
+src/test/resources/features/
+├── 01-authentification/
+│   ├── login.feature
+│   ├── logout.feature
+│   └── password-reset.feature
+├── 02-gestion-utilisateurs/
+│   ├── creation-utilisateur.feature
+│   ├── modification-profil.feature
+│   └── suppression-compte.feature
+├── 03-commandes/
+│   ├── creation-commande.feature
+│   ├── paiement.feature
+│   └── livraison.feature
+└── 04-reporting/
+    ├── statistiques.feature
+    └── exports.feature
+```
+
+#### Feature documentée avec contexte métier
+
+```gherkin
+# language: fr
+@authentification @critique
+Feature: Connexion utilisateur
+  
+  En tant qu'utilisateur enregistré
+  Je veux pouvoir me connecter à l'application
+  Afin d'accéder à mon espace personnel
+  
+  Règles métier:
+  - L'email doit être valide et enregistré
+  - Le mot de passe doit correspondre
+  - Après 3 échecs, le compte est temporairement bloqué (15 min)
+  - Une session expire après 30 minutes d'inactivité
+  
+  Contexte:
+    Given les utilisateurs suivants existent:
+      | email               | password   | statut |
+      | alice@example.com   | Pass123!   | actif  |
+      | bob@example.com     | Secret456! | actif  |
+      | charlie@example.com | Test789!   | bloqué |
+
+  @smoke @happy-path
+  Scenario: Connexion réussie avec des identifiants valides
+    Given je suis sur la page de connexion
+    When je saisis "alice@example.com" comme email
+    And je saisis "Pass123!" comme mot de passe
+    And je clique sur "Se connecter"
+    Then je suis redirigé vers le tableau de bord
+    And je vois le message "Bienvenue Alice"
+    And ma session est active pour 30 minutes
+
+  @sécurité
+  Scenario: Échec de connexion avec mot de passe incorrect
+    Given je suis sur la page de connexion
+    When je saisis "alice@example.com" comme email
+    And je saisis "MauvaisMotDePasse" comme mot de passe
+    And je clique sur "Se connecter"
+    Then je reste sur la page de connexion
+    And je vois le message d'erreur "Identifiants incorrects"
+```
+
+### Exemple 2 : Utilisation avancée des tags
+
+```gherkin
+@module:authentification
+@priority:haute
+@jira:AUTH-123
+@version:2.5.0
+Feature: Authentification multi-facteurs (MFA)
+  
+  @mfa @sécurité @smoke
+  Scenario: Activation du MFA par SMS
+    Given je suis connecté en tant que "alice@example.com"
+    And je suis sur la page "Paramètres de sécurité"
+    When j'active l'authentification à deux facteurs
+    And je choisis "SMS" comme méthode
+    And je saisis mon numéro "+33612345678"
+    Then je reçois un code de vérification par SMS
+    And le MFA est activé sur mon compte
+```
+
+### Exemple 3 : Génération de rapports enrichis
+
+#### Configuration Maven
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>net.masterthought</groupId>
+            <artifactId>maven-cucumber-reporting</artifactId>
+            <version>5.7.7</version>
+            <executions>
+                <execution>
+                    <id>generate-documentation</id>
+                    <phase>verify</phase>
+                    <goals>
+                        <goal>generate</goal>
+                    </goals>
+                    <configuration>
+                        <projectName>Documentation Vivante</projectName>
+                        <outputDirectory>${project.build.directory}/documentation</outputDirectory>
+                        <inputDirectory>${project.build.directory}</inputDirectory>
+                        <jsonFiles>
+                            <param>**/*.json</param>
+                        </jsonFiles>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+```
+
+#### Lanceur avec génération de documentation
+
+```java
+package edu.one.dojo.runner;
+
+import org.junit.runner.RunWith;
+import io.cucumber.junit.Cucumber;
+import io.cucumber.junit.CucumberOptions;
+
+@RunWith(Cucumber.class)
+@CucumberOptions(
+    features = "src/test/resources/features",
+    glue = {"edu.one.dojo.steps", "edu.one.dojo.hooks"},
+    plugin = {
+        "pretty",
+        "html:target/documentation/cucumber-html-report.html",
+        "json:target/cucumber.json",
+        "junit:target/cucumber.xml",
+        "timeline:target/documentation/timeline"
+    },
+    monochrome = true,
+    publish = true
+)
+public class DocumentationRunner {
+}
+```
+
+### Bonnes pratiques
+
+1. **Organisez par domaine** : Structure claire des features
+2. **Documentez le contexte métier** : Règles, contraintes, objectifs
+3. **Utilisez des tags significatifs** : Module, priorité, version
+4. **Générez des rapports visuels** : HTML, timeline, statistiques
+5. **Partagez avec l'équipe** : Documentation accessible à tous
+6. **Maintenez à jour** : Synchronisez avec le code
+7. **Incluez des exemples** : Cas d'usage concrets
+8. **Tracez les exigences** : Lien avec JIRA, user stories
+
 
 ## Licence
 
