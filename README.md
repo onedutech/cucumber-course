@@ -79,12 +79,21 @@ Mettre à jour votre `pom.xml` avec les trois dépendances suivantes.
         <scope>test</scope>
     </dependency>
     <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter</artifactId>
-        <version>5.10.2</version>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.2</version>
         <scope>test</scope>
     </dependency>
 </dependencies>
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>3.2.5</version>
+        </plugin>
+    </plugins>
+</build>
 ```
 
 Une fois, le `pom.xml` modifié, n'oubliez pas de relancer `Maven -> Update Project...` ou `mvn clean install`
@@ -1565,7 +1574,6 @@ public class ProduitSteps {
 }
 ```
 
-### Exemple 3 : Conversion automatique en objets (List<Produit>)
 
 #### Créer une classe Produit
 
@@ -1603,7 +1611,7 @@ public class Produit {
 }
 ```
 
-#### Step Definition avec conversion automatique
+#### Step Definition avec conversion 
 
 ```java
 package edu.one.dojo.steps;
@@ -1626,6 +1634,21 @@ public class ProduitSteps {
     }
 }
 ```
+Pour cela il faut créer un DataTableType pour convertir DataTable vers List<Produit>
+
+```java
+public class DataTableProduit {
+@DataTableType
+public Produit produitEntry(Map<String, String> row) {
+        return new Produit(
+                row.get("nom"),
+                Double.parseDouble(row.get("prix")),
+                Integer.parseInt(row.get("stock"))
+        );
+    }
+}
+```
+
 
 ### Exemple 4 : Tableau vertical (Map<String, String>)
 
@@ -1695,7 +1718,7 @@ Feature: Commandes multiples
 ### Bonnes pratiques
 
 1. **Utilisez des en-têtes clairs** : Noms explicites pour les colonnes
-2. **Préférez la conversion automatique** : Laissez Cucumber faire le travail
+2. **Préférez la conversion automatique** : Laissez Cucumber faire le travail (nécessite Junit5)
 3. **Validez les données** : Vérifiez les valeurs dans les transformers
 4. **Gardez les tableaux lisibles** : Pas trop de colonnes (max 5-6)
 5. **Utilisez des objets métier** : Conversion directe en classes du domaine
