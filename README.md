@@ -1794,9 +1794,10 @@ public class LoginSteps {
 
     private WebDriver driver;
 
-    @Before
+    @Before("@login")
     public void setUpDriver() {
         driver = new ChromeDriver();
+        driver.manage().window().maximize();
     }
 
     @Given("user navigates to {string} by opening Chrome")
@@ -1808,6 +1809,7 @@ public class LoginSteps {
     public void userEntersCorrectANDValues(String username, String password) {
         driver.findElement(By.id("username")).sendKeys(username);
         driver.findElement(By.id("password")).sendKeys(password);
+        takeStepScreenshot("loginpage","login");
         driver.findElement(By.xpath("/html/body/div/form/button")).click();
     }
 
@@ -1818,17 +1820,31 @@ public class LoginSteps {
                 ExpectedConditions.presenceOfElementLocated(By.id("status"))
         );
         Assert.assertEquals("Login success", statusElement.getText());
-
+        takeStepScreenshot("homepage","login");
     }
 
-    @After
+    @After("@login")
     public void tearDown() {
         if (driver != null) {
             driver.close();
             driver.quit();
         }
     }
+
+
+    public void takeStepScreenshot(String filename, String testName) {
+        TakesScreenshot screenshot = ((TakesScreenshot) driver);
+        File srcImage = screenshot.getScreenshotAs(OutputType.FILE);
+        String filepath = "target/reports/ExtentReporter/" + testName + "/" + filename + ".png";
+        File destFile = new File(filepath);
+        try {
+            FileUtils.copyFile(srcImage, destFile);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
 ```
 
 ### Exemple 2 : Intégration avec RestAssured (API)
