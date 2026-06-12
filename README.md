@@ -1747,89 +1747,86 @@ Cucumber s'intègre facilement avec des frameworks de test populaires comme Sele
 #### Ajouter les dépendances Maven
 
 ```xml
-<dependencies>
-    <!-- Selenium WebDriver -->
-    <dependency>
-        <groupId>org.seleniumhq.selenium</groupId>
-        <artifactId>selenium-java</artifactId>
-        <version>4.15.0</version>
-    </dependency>
-    
-    <!-- WebDriverManager -->
-    <dependency>
-        <groupId>io.github.bonigarcia</groupId>
-        <artifactId>webdrivermanager</artifactId>
-        <version>5.6.2</version>
-    </dependency>
-</dependencies>
+	<dependency>
+		<groupId>org.seleniumhq.selenium</groupId>
+		<artifactId>selenium-java</artifactId>
+		<version>4.44.0</version>
+	</dependency>
 ```
 
 #### Feature pour test UI
 
 ```gherkin
-Feature: Connexion utilisateur
+Feature: Access home page
+  As a user, I want to access home page.
 
-  @web @login
-  Scenario: Connexion réussie
-    Given je suis sur la page de connexion
-    When je saisis "alice@example.com" comme email
-    And je saisis "password123" comme mot de passe
-    And je clique sur le bouton "Se connecter"
-    Then je suis redirigé vers le tableau de bord
-    And je vois le message "Bienvenue Alice"
+  @login
+  Scenario Outline: Authentication
+    Given user navigates to "<home_page>" by opening Chrome
+    When user enters correct "<username>" AND "<password>" values
+    Then user is directed to the homepage
+
+    Examples:
+      | home_page                       | username | password |
+      | http://localhost:8080/home.html | login    | pass     |
 ```
 
-#### Hooks Selenium
+#### Steps Selenium
 
 ```java
-package edu.one.dojo.hooks;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
-import io.cucumber.java.Scenario;
-import io.github.bonigarcia.wdm.WebDriverManager;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
+import org.junit.Assert;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
-public class SeleniumHooks {
-    
-    private static WebDriver driver;
-    
-    @Before("@web")
-    public void setupSelenium() {
-        System.out.println("🌐 Initialisation de Selenium WebDriver");
-        
-        WebDriverManager.chromedriver().setup();
-        
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--start-maximized");
-        options.addArguments("--disable-notifications");
-        
-        driver = new ChromeDriver(options);
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+public class LoginSteps {
+
+    private WebDriver driver;
+
+    @Before
+    public void setUpDriver() {
+        driver = new ChromeDriver();
     }
-    
-    @After("@web")
-    public void teardownSelenium(Scenario scenario) {
-        if (scenario.isFailed() && driver != null) {
-            byte[] screenshot = ((TakesScreenshot) driver)
-                .getScreenshotAs(OutputType.BYTES);
-            scenario.attach(screenshot, "image/png", scenario.getName());
-        }
-        
+
+    @Given("user navigates to {string} by opening Chrome")
+    public void user_navigates_to_login_page_by_opening_chrome(String page) {
+        driver.get(page);
+    }
+
+    @When("user enters correct {string} AND {string} values")
+    public void userEntersCorrectANDValues(String username, String password) {
+        driver.findElement(By.id("username")).sendKeys(username);
+        driver.findElement(By.id("password")).sendKeys(password);
+        driver.findElement(By.xpath("/html/body/div/form/button")).click();
+    }
+
+    @Then("user is directed to the homepage")
+    public void user_is_directed_to_the_homepage() {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement statusElement = wait.until(
+                ExpectedConditions.presenceOfElementLocated(By.id("status"))
+        );
+        Assert.assertEquals("Login success", statusElement.getText());
+
+    }
+
+    @After
+    public void tearDown() {
         if (driver != null) {
+            driver.close();
             driver.quit();
-            System.out.println("🔚 Fermeture de Selenium WebDriver");
         }
-    }
-    
-    public static WebDriver getDriver() {
-        return driver;
     }
 }
 ```
@@ -1854,14 +1851,14 @@ Feature: API Utilisateurs
   @api
   Scenario: Récupérer la liste des utilisateurs
     Given l'API est disponible
-    When j'envoie une requête GET à "/api/users"
+    When j'envoie une requête GET à "/users"
     Then le code de statut est 200
     And la réponse contient une liste d'utilisateurs
 
   @api
   Scenario: Créer un nouvel utilisateur
     Given l'API est disponible
-    When j'envoie une requête POST à "/api/users" avec:
+    When j'envoie une requête POST à "/users" avec:
       | name  | Alice Smith       |
       | email | alice@example.com |
       | role  | admin             |
@@ -1891,13 +1888,13 @@ public class ApiSteps {
     
     @Given("l'API est disponible")
     public void verifyApiAvailable() {
-        baseURI = "http://localhost";
-        port = 8080;
-        basePath = "/api";
+        baseURI = "https://jsonplaceholder.typicode.com";
+        port = 443;
+        basePath = "/";
         
         response = given()
             .when()
-            .get("/health")
+            .get("/users")
             .then()
             .statusCode(200)
             .extract().response();
